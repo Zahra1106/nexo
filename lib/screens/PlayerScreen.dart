@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import '../controllers/PlayerController.dart';
+import '../core/services/RemoteService.dart';
+
 
 class PlayerScreen extends StatefulWidget {
   final String streamUrl;
@@ -38,10 +40,30 @@ class _PlayerScreenState extends State<PlayerScreen> {
         title: widget.channelTitle,
       );
     });
+
+    // Firestick remote buttons
+    RemoteService.init(
+      onPlayPause:   () => _ctrl.togglePlayPause(),
+      onPlay:  () => _ctrl.togglePlayPause(),
+      onPause: () => _ctrl.togglePlayPause(),
+      onRewind:      () => _ctrl.seekBackward(),
+      onFastForward: () => _ctrl.seekForward(),
+      onChannelUp:   () => _changeChannel(-1),
+      onChannelDown: () => _changeChannel(1),
+      onMenu: () {
+        if (mounted) setState(() {});
+        _ctrl.tapScreen();
+      },
+    );
+  }
+
+  void _changeChannel(int direction) {
+    // Live TV controller se connect hoga — baad mein
   }
 
   @override
   void dispose() {
+    RemoteService.dispose();
     SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     Get.delete<PlayerController>();
@@ -140,13 +162,10 @@ class _ControlsOverlay extends StatelessWidget {
       ),
       child: Column(
         children: [
-          // Top bar
           _TopBar(ctrl: ctrl, channelTitle: channelTitle),
           const Spacer(),
-          // Center controls
           _CenterControls(ctrl: ctrl),
           const Spacer(),
-          // Bottom bar: progress + time
           _BottomBar(ctrl: ctrl),
         ],
       ),
@@ -184,7 +203,6 @@ class _TopBar extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
             ),
           ),
-          // LIVE badge
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
             decoration: BoxDecoration(
@@ -228,20 +246,15 @@ class _CenterControls extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        // Seek back
-        _SeekButton(
-          icon: Icons.replay_10,
-          onTap: ctrl.seekBackward,
-        ),
+        _SeekButton(icon: Icons.replay_10, onTap: ctrl.seekBackward),
         const SizedBox(width: 32),
-        // Play / Pause
         Obx(() => GestureDetector(
           onTap: ctrl.togglePlayPause,
           child: Container(
             width: 72,
             height: 72,
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.15),
+              color: Colors.white.withValues(alpha: 0.15),
               shape: BoxShape.circle,
               border: Border.all(color: Colors.white54, width: 2),
             ),
@@ -253,11 +266,7 @@ class _CenterControls extends StatelessWidget {
           ),
         )),
         const SizedBox(width: 32),
-        // Seek forward
-        _SeekButton(
-          icon: Icons.forward_10,
-          onTap: ctrl.seekForward,
-        ),
+        _SeekButton(icon: Icons.forward_10, onTap: ctrl.seekForward),
       ],
     );
   }
@@ -276,7 +285,7 @@ class _SeekButton extends StatelessWidget {
         width: 52,
         height: 52,
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.1),
+          color: Colors.white.withValues(alpha: 0.1),
           shape: BoxShape.circle,
         ),
         child: Icon(icon, color: Colors.white, size: 28),
@@ -297,13 +306,12 @@ class _BottomBar extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
       child: Column(
         children: [
-          // Progress slider
           Obx(() => SliderTheme(
             data: SliderTheme.of(context).copyWith(
               thumbColor: const Color(0xFFE53935),
               activeTrackColor: const Color(0xFFE53935),
               inactiveTrackColor: Colors.white30,
-              overlayColor: Colors.red.withOpacity(0.2),
+              overlayColor: Colors.red.withValues(alpha: 0.2),
               thumbShape:
               const RoundSliderThumbShape(enabledThumbRadius: 7),
               trackHeight: 3,
@@ -311,13 +319,12 @@ class _BottomBar extends StatelessWidget {
             child: Slider(
               value: ctrl.progressRatio.clamp(0.0, 1.0),
               onChanged: (v) {
-                final ms =
-                (v * ctrl.totalDuration.value.inMilliseconds).toInt();
+                final ms = (v * ctrl.totalDuration.value.inMilliseconds)
+                    .toInt();
                 ctrl.seekTo(Duration(milliseconds: ms));
               },
             ),
           )),
-          // Time row
           Obx(() => Padding(
             padding: const EdgeInsets.symmetric(horizontal: 8),
             child: Row(
@@ -325,11 +332,13 @@ class _BottomBar extends StatelessWidget {
               children: [
                 Text(
                   ctrl.formattedPosition,
-                  style: const TextStyle(color: Colors.white70, fontSize: 12),
+                  style: const TextStyle(
+                      color: Colors.white70, fontSize: 12),
                 ),
                 Text(
                   ctrl.formattedDuration,
-                  style: const TextStyle(color: Colors.white70, fontSize: 12),
+                  style: const TextStyle(
+                      color: Colors.white70, fontSize: 12),
                 ),
               ],
             ),
@@ -361,7 +370,8 @@ class _BufferingIndicator extends StatelessWidget {
         const SizedBox(height: 12),
         Text(
           'Buffering...',
-          style: TextStyle(color: Colors.white.withOpacity(0.7), fontSize: 13),
+          style: TextStyle(
+              color: Colors.white.withValues(alpha: 0.7), fontSize: 13),
         ),
       ],
     );
@@ -383,7 +393,8 @@ class _ErrorOverlay extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.error_outline, color: Color(0xFFE53935), size: 56),
+            const Icon(Icons.error_outline,
+                color: Color(0xFFE53935), size: 56),
             const SizedBox(height: 16),
             Text(
               message,
@@ -395,13 +406,14 @@ class _ErrorOverlay extends StatelessWidget {
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFFE53935),
                 foregroundColor: Colors.white,
-                padding:
-                const EdgeInsets.symmetric(horizontal: 28, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 28, vertical: 12),
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8)),
               ),
               icon: const Icon(Icons.refresh),
-              label: const Text('Retry', style: TextStyle(fontSize: 15)),
+              label:
+              const Text('Retry', style: TextStyle(fontSize: 15)),
               onPressed: onRetry,
             ),
           ],

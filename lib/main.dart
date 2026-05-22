@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:nexo/screens/splash.dart';
 
+import 'core/services/FavoritesService.dart';
 import 'core/services/remote_config_service.dart';
 import 'core/storage/local_storage.dart';
 
@@ -12,6 +13,7 @@ void main() async {
   // Firebase init
   await Firebase.initializeApp();
   await LocalStorage.init();
+  await FavoritesService.init(); // ← yeh add karo
   // Sabse pehle server URL fetch karo
   await RemoteConfigService.init();
 

@@ -3,8 +3,11 @@ import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../controllers/HomeController.dart';
+import '../setting/SettingsPanel.dart';
 import '../widgets/ChannelCard.dart';
 import '../widgets/MovieCard.dart';
+import 'live_tv.dart';
+
 
 
 class HomeScreen extends StatefulWidget {
@@ -155,6 +158,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         _selectedItem = item['title'];
                         ctrl.selectedIndex.value = index;
                       });
+                      _onMenuSelect(item['title'] as String);
                     },
                     child: Stack(
                       alignment: Alignment.centerLeft,
@@ -401,6 +405,21 @@ class _HomeScreenState extends State<HomeScreen> {
       colorText: Colors.white,
       duration: const Duration(seconds: 1),
     );
+  }
+
+  void _onMenuSelect(String title) {
+    switch (title) {
+      case 'Settings':
+        Get.to(() => const SettingsPanel());
+        break;
+      case 'Live TV':
+        Get.to(() => const LiveTvScreen());
+        break;
+      case 'Movies':
+      case 'Series TV':
+      // VOD screen — baad mein connect karenge
+        break;
+    }
   }
 
   @override

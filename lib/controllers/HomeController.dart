@@ -1,6 +1,7 @@
 import 'package:get/get.dart';
 import '../../core/services/api_service.dart';
 import '../../core/storage/local_storage.dart';
+import '../core/services/FavoritesService.dart';
 
 class HomeController extends GetxController {
   final channels = [].obs;
@@ -16,6 +17,7 @@ class HomeController extends GetxController {
   void onInit() {
     super.onInit();
     fetchAll();
+    loadFavorites();
   }
 
   Future<void> fetchAll() async {
@@ -39,5 +41,11 @@ class HomeController extends GetxController {
     categories.value = ['All', ...cats];
 
     isLoading.value = false;
+  }
+  // Favorites row
+  final favorites = <Map>[].obs;
+
+  void loadFavorites() {
+    favorites.assignAll(FavoritesService.getFavorites());
   }
 }
