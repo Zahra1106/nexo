@@ -7,7 +7,7 @@ plugins {
 
 android {
     namespace = "com.example.nexo"
-    compileSdk = 35
+    compileSdk = 36
     ndkVersion = flutter.ndkVersion
 
     defaultConfig {

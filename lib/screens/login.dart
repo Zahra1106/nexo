@@ -186,7 +186,47 @@ class _LoginScreenState extends State<Login> {
                       const SizedBox(height: 30),
 
                       // LOGIN BUTTON
-                      Obx(() => _buildButton()),
+                      Obx(() {
+                        return GestureDetector(
+                          onTap: _login,
+                          child: Container(
+                            width: double.infinity,
+                            height: 52,
+                            decoration: BoxDecoration(
+                              color: btnFocus.hasFocus
+                                  ? const Color(0xFF00CFFF)
+                                  : const Color(0xFF1296F3),
+                              borderRadius: BorderRadius.circular(6),
+                              boxShadow: btnFocus.hasFocus
+                                  ? [const BoxShadow(
+                                color: Color(0x5500CFFF),
+                                blurRadius: 20,
+                                spreadRadius: 2,
+                              )]
+                                  : [],
+                            ),
+                            child: Center(
+                              child: controller.isLoading.value
+                                  ? const SizedBox(
+                                width: 24,
+                                height: 24,
+                                child: CircularProgressIndicator(
+                                  color: Colors.black,
+                                  strokeWidth: 2.5,
+                                ),
+                              )
+                                  : const Text(
+                                "Start Streaming",
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ),
+                        );
+                      }),
                     ],
                   ),
                 ),
@@ -198,6 +238,7 @@ class _LoginScreenState extends State<Login> {
     );
   }
 
+  // Focus widget hata do — sirf TextField rakho
   Widget _buildField({
     required TextEditingController controller,
     required FocusNode focusNode,
@@ -205,133 +246,84 @@ class _LoginScreenState extends State<Login> {
     required String hint,
     required IconData icon,
   }) {
-    return Focus(
-      focusNode: focusNode,
-      onKeyEvent: (node, event) {
-        if (event is KeyDownEvent &&
-            event.logicalKey ==
-                LogicalKeyboardKey.arrowDown) {
-          nextFocus.requestFocus();
-
-          return KeyEventResult.handled;
-        }
-
-        return KeyEventResult.ignored;
+    return AnimatedBuilder(
+      animation: focusNode,
+      builder: (context, child) {
+        return Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(6),
+            border: Border.all(
+              color: focusNode.hasFocus
+                  ? const Color(0xFF00CFFF)
+                  : Colors.transparent,
+              width: 2,
+            ),
+          ),
+          child: TextField(
+            controller: controller,
+            focusNode: focusNode,
+            onSubmitted: (_) => nextFocus.requestFocus(),
+            style: const TextStyle(color: Colors.white),
+            decoration: InputDecoration(
+              hintText: hint,
+              hintStyle: const TextStyle(color: Colors.white38),
+              filled: true,
+              fillColor: Colors.white12,
+              prefixIcon: Icon(icon, color: Colors.white38),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(6),
+                borderSide: BorderSide.none,
+              ),
+            ),
+          ),
+        );
       },
-      child: AnimatedBuilder(
-        animation: focusNode,
-        builder: (context, child) {
-          return Container(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(6),
-              border: Border.all(
-                color: focusNode.hasFocus
-                    ? const Color(0xFF00CFFF)
-                    : Colors.transparent,
-                width: 2,
-              ),
-            ),
-            child: TextField(
-              controller: controller,
-              focusNode: focusNode,
-              style: const TextStyle(
-                color: Colors.white,
-              ),
-              decoration: InputDecoration(
-                hintText: hint,
-                hintStyle: const TextStyle(
-                  color: Colors.white38,
-                ),
-                filled: true,
-                fillColor: Colors.white12,
-                prefixIcon: Icon(
-                  icon,
-                  color: Colors.white38,
-                ),
-                border: OutlineInputBorder(
-                  borderRadius:
-                  BorderRadius.circular(6),
-                  borderSide: BorderSide.none,
-                ),
-              ),
-            ),
-          );
-        },
-      ),
     );
   }
 
   Widget _buildPasswordField() {
-    return Focus(
-      focusNode: passFocus,
-      onKeyEvent: (node, event) {
-        if (event is KeyDownEvent &&
-            event.logicalKey ==
-                LogicalKeyboardKey.arrowDown) {
-          btnFocus.requestFocus();
-
-          return KeyEventResult.handled;
-        }
-
-        return KeyEventResult.ignored;
+    return AnimatedBuilder(
+      animation: passFocus,
+      builder: (context, child) {
+        return Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(6),
+            border: Border.all(
+              color: passFocus.hasFocus
+                  ? const Color(0xFF00CFFF)
+                  : Colors.transparent,
+              width: 2,
+            ),
+          ),
+          child: TextField(
+            controller: passwordController,
+            focusNode: passFocus,
+            obscureText: _obscurePassword,
+            onSubmitted: (_) => btnFocus.requestFocus(),
+            style: const TextStyle(color: Colors.white),
+            decoration: InputDecoration(
+              hintText: "Enter your password",
+              hintStyle: const TextStyle(color: Colors.white38),
+              filled: true,
+              fillColor: Colors.white12,
+              prefixIcon: const Icon(Icons.key_outlined, color: Colors.white38),
+              suffixIcon: IconButton(
+                icon: Icon(
+                  _obscurePassword
+                      ? Icons.remove_red_eye_outlined
+                      : Icons.visibility_off_outlined,
+                  color: Colors.white38,
+                ),
+                onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+              ),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(6),
+                borderSide: BorderSide.none,
+              ),
+            ),
+          ),
+        );
       },
-      child: AnimatedBuilder(
-        animation: passFocus,
-        builder: (context, child) {
-          return Container(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(6),
-              border: Border.all(
-                color: passFocus.hasFocus
-                    ? const Color(0xFF00CFFF)
-                    : Colors.transparent,
-                width: 2,
-              ),
-            ),
-            child: TextField(
-              controller: passwordController,
-              focusNode: passFocus,
-              obscureText: _obscurePassword,
-              style: const TextStyle(
-                color: Colors.white,
-              ),
-              decoration: InputDecoration(
-                hintText: "Enter your password",
-                hintStyle: const TextStyle(
-                  color: Colors.white38,
-                ),
-                filled: true,
-                fillColor: Colors.white12,
-                prefixIcon: const Icon(
-                  Icons.key_outlined,
-                  color: Colors.white38,
-                ),
-                suffixIcon: IconButton(
-                  icon: Icon(
-                    _obscurePassword
-                        ? Icons
-                        .remove_red_eye_outlined
-                        : Icons
-                        .visibility_off_outlined,
-                    color: Colors.white38,
-                  ),
-                  onPressed: () {
-                    setState(() {
-                      _obscurePassword =
-                      !_obscurePassword;
-                    });
-                  },
-                ),
-                border: OutlineInputBorder(
-                  borderRadius:
-                  BorderRadius.circular(6),
-                  borderSide: BorderSide.none,
-                ),
-              ),
-            ),
-          );
-        },
-      ),
     );
   }
 
@@ -406,14 +398,6 @@ class _LoginScreenState extends State<Login> {
       usernameController.text,
       passwordController.text,
     );
-
-    if (controller.errorMsg.value.isEmpty) {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (_) => const HomeScreen(),
-        ),
-      );
-    }
+    // LoginController khud navigate karega Get.offAll se
   }
 }

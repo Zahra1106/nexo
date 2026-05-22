@@ -1,4 +1,5 @@
 import 'package:get/get.dart';
+import 'package:nexo/screens/home.dart';
 import '../../core/services/api_service.dart';
 import '../../core/storage/local_storage.dart';
 
@@ -20,10 +21,9 @@ class LoginController extends GetxController {
     if (data != null && data['user_info'] != null) {
       final userInfo = data['user_info'];
 
-      // Check karo account active hai
       if (userInfo['status'] == 'Active') {
         await LocalStorage.saveLogin(username, password);
-        Get.offAllNamed('/home');
+        Get.offAll(() => const HomeScreen()); // ✅ Fixed
       } else {
         errorMsg.value = 'Account expired ya inactive hai';
       }

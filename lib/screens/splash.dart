@@ -1,10 +1,11 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:nexo/screens/home.dart';
+import 'package:video_player/video_player.dart';
 import '../../core/storage/local_storage.dart';
 import 'login.dart';
-
 
 class Splash extends StatefulWidget {
   const Splash({super.key});
@@ -13,101 +14,238 @@ class Splash extends StatefulWidget {
   State<Splash> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<Splash> {
-  bool showBottomText = false;
+class _SplashScreenState extends State<Splash> with TickerProviderStateMixin {
+  // Video
+  late VideoPlayerController _videoController;
+  bool _videoInitialized = false;
+  bool _videoFinished = false;
+
+  // Splash
+  bool _showSplash = false;
+  bool _showBottomText = false;
+
+  // Animations
+  late AnimationController _fadeController;
+  late Animation<double> _fadeAnimation;
+
+  late AnimationController _logoController;
+  late Animation<double> _logoScaleAnim;
+  late Animation<double> _logoFadeAnim;
 
   @override
   void initState() {
     super.initState();
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+    _setupAnimations();
+    _initVideo();
+  }
 
-    // 5 sec baad version text show hoga
-    Timer(const Duration(seconds: 5), () {
+  void _setupAnimations() {
+    _fadeController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    );
+    _fadeAnimation = CurvedAnimation(
+      parent: _fadeController,
+      curve: Curves.easeInOut,
+    );
+
+    _logoController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    );
+    _logoScaleAnim = Tween<double>(begin: 0.6, end: 1.0).animate(
+      CurvedAnimation(parent: _logoController, curve: Curves.elasticOut),
+    );
+    _logoFadeAnim = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _logoController,
+        curve: const Interval(0.0, 0.6, curve: Curves.easeIn),
+      ),
+    );
+  }
+
+  Future<void> _initVideo() async {
+    _videoController = VideoPlayerController.asset('assets/videos/splash.mp4');
+
+    try {
+      await _videoController.initialize();
       if (mounted) {
-        setState(() {
-          showBottomText = true;
+        setState(() => _videoInitialized = true);
+        _videoController.play();
+
+        // 9 sec baad auto complete
+        Timer(const Duration(seconds: 9), () {
+          if (!_videoFinished) {
+            _videoFinished = true;
+            _onVideoComplete();
+          }
         });
       }
-    });
+    } catch (e) {
+      // Video load fail ho to seedha splash
+      _onVideoComplete();
+    }
+  }
 
-    // 10 sec baad check karo — login hua tha ya nahi
-    Timer(const Duration(seconds: 10), () {
-      if (LocalStorage.isLoggedIn()) {
-        // Pehle se logged in — seedha home
-        Get.off(() => const HomeScreen());
-      } else {
-        // Pehli baar — login screen
-        Get.off(() => const Login());
+  void _onVideoComplete() {
+    _fadeController.forward().then((_) {
+      if (mounted) {
+        setState(() => _showSplash = true);
+        _logoController.forward();
+
+        // 5 sec baad bottom text
+        Timer(const Duration(seconds: 5), () {
+          if (mounted) setState(() => _showBottomText = true);
+        });
+
+        // 10 sec baad navigate
+        Timer(const Duration(seconds: 5), _navigateNext);
       }
     });
+  }
+
+  void _navigateNext() {
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+    if (!mounted) return;
+
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(
+        builder: (_) => LocalStorage.isLoggedIn()
+            ? const HomeScreen()
+            : const Login(),
+      ),
+          (route) => false,
+    );
+  }
+
+  @override
+  void dispose() {
+    _videoController.dispose();
+    _fadeController.dispose();
+    _logoController.dispose();
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black,
-      body: Container(
-        width: double.infinity,
-        height: double.infinity,
-        decoration: BoxDecoration(
-          border: Border.all(
-            color: const Color(0xFF00BFA5),
-            width: 3,
-          ),
-        ),
-        child: Stack(
-          children: [
-            // NEXO logo — center
-            Center(
-              child: ShaderMask(
-                shaderCallback: (bounds) => const LinearGradient(
-                  colors: [
-                    Color(0xFF00CFFF),
-                    Color(0xFF6A5CFF),
-                    Color(0xFFFF00CC),
-                  ],
-                  begin: Alignment.centerLeft,
-                  end: Alignment.centerRight,
-                ).createShader(bounds),
-                child: const Text(
-                  "NEXO",
-                  style: TextStyle(
-                    fontSize: 90,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                    letterSpacing: 4,
+      body: Stack(
+        children: [
+          // ── 1. VIDEO LAYER ──
+          if (_videoInitialized && !_showSplash)
+            Positioned.fill(
+              child: FadeTransition(
+                opacity: Tween<double>(begin: 1.0, end: 0.0)
+                    .animate(_fadeAnimation),
+                child: SizedBox.expand(
+                  child: FittedBox(
+                    fit: BoxFit.cover,
+                    child: SizedBox(
+                      width: _videoController.value.size.width,
+                      height: _videoController.value.size.height,
+                      child: VideoPlayer(_videoController),
+                    ),
                   ),
                 ),
               ),
             ),
 
-            // Bottom version + copyright
-            if (showBottomText)
-              Positioned(
-                bottom: 25,
-                left: 0,
-                right: 0,
-                child: Column(
-                  children: const [
-                    Text(
-                      "V1.0.0",
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 12,
+          // Loading spinner
+          if (!_videoInitialized && !_showSplash)
+            const Center(
+              child: CircularProgressIndicator(
+                color: Color(0xFF00CFFF),
+              ),
+            ),
+
+          // ── 2. SPLASH LAYER ──
+          if (_showSplash)
+            Positioned.fill(
+              child: FadeTransition(
+                opacity: _fadeAnimation,
+                child: Container(
+                  color: Colors.black,
+                  child: Container(
+                    width: double.infinity,
+                    height: double.infinity,
+                    decoration: BoxDecoration(
+                      border: Border.all(
+                        color: const Color(0xFF00BFA5),
+                        width: 3,
                       ),
                     ),
-                    SizedBox(height: 5),
-                    Text(
-                      "Copyright © NEXO TV, All Rights Reserved.",
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 10,
-                      ),
+                    child: Stack(
+                      children: [
+                        // NEXO Logo
+                        Center(
+                          child: AnimatedBuilder(
+                            animation: _logoController,
+                            builder: (_, __) => Opacity(
+                              opacity: _logoFadeAnim.value,
+                              child: Transform.scale(
+                                scale: _logoScaleAnim.value,
+                                child: ShaderMask(
+                                  shaderCallback: (bounds) =>
+                                      const LinearGradient(
+                                        colors: [
+                                          Color(0xFF00CFFF),
+                                          Color(0xFF6A5CFF),
+                                          Color(0xFFFF00CC),
+                                        ],
+                                        begin: Alignment.centerLeft,
+                                        end: Alignment.centerRight,
+                                      ).createShader(bounds),
+                                  child: const Text(
+                                    "NEXO",
+                                    style: TextStyle(
+                                      fontSize: 90,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white,
+                                      letterSpacing: 4,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+
+                        // Bottom version + copyright
+                        if (_showBottomText)
+                          Positioned(
+                            bottom: 25,
+                            left: 0,
+                            right: 0,
+                            child: Column(
+                              children: const [
+                                Text(
+                                  "V1.0.0",
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                                SizedBox(height: 5),
+                                Text(
+                                  "Copyright © NEXO TV, All Rights Reserved.",
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 10,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                      ],
                     ),
-                  ],
+                  ),
                 ),
               ),
-          ],
-        ),
+            ),
+        ],
       ),
     );
   }
