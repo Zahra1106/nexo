@@ -24,6 +24,9 @@ class _SplashScreenState extends State<Splash> with TickerProviderStateMixin {
   bool _showSplash = false;
   bool _showBottomText = false;
 
+  // User state
+  late bool _isLoggedIn;
+
   // Animations
   late AnimationController _fadeController;
   late Animation<double> _fadeAnimation;
@@ -35,6 +38,7 @@ class _SplashScreenState extends State<Splash> with TickerProviderStateMixin {
   @override
   void initState() {
     super.initState();
+    _isLoggedIn = LocalStorage.isLoggedIn(); // pehle check kar lo
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
     _setupAnimations();
     _initVideo();
@@ -74,7 +78,6 @@ class _SplashScreenState extends State<Splash> with TickerProviderStateMixin {
         setState(() => _videoInitialized = true);
         _videoController.play();
 
-        // 9 sec baad auto complete
         Timer(const Duration(seconds: 9), () {
           if (!_videoFinished) {
             _videoFinished = true;
@@ -83,23 +86,30 @@ class _SplashScreenState extends State<Splash> with TickerProviderStateMixin {
         });
       }
     } catch (e) {
-      // Video load fail ho to seedha splash
       _onVideoComplete();
     }
   }
 
   void _onVideoComplete() {
+    if (!_isLoggedIn) {
+      // New user: seedha login page
+      _fadeController.forward().then((_) {
+        _navigateNext();
+      });
+      return;
+    }
+
+    // Registered user: splash screen dikhao pehle
     _fadeController.forward().then((_) {
       if (mounted) {
         setState(() => _showSplash = true);
         _logoController.forward();
 
-        // 5 sec baad bottom text
-        Timer(const Duration(seconds: 5), () {
+        Timer(const Duration(seconds: 2), () {
           if (mounted) setState(() => _showBottomText = true);
         });
 
-        // 10 sec baad navigate
+        // 5 sec baad navigate to home
         Timer(const Duration(seconds: 5), _navigateNext);
       }
     });
@@ -111,7 +121,7 @@ class _SplashScreenState extends State<Splash> with TickerProviderStateMixin {
 
     Navigator.of(context).pushAndRemoveUntil(
       MaterialPageRoute(
-        builder: (_) => LocalStorage.isLoggedIn()
+        builder: (_) => _isLoggedIn
             ? const HomeScreen()
             : const Login(),
       ),
@@ -161,7 +171,7 @@ class _SplashScreenState extends State<Splash> with TickerProviderStateMixin {
               ),
             ),
 
-          // ── 2. SPLASH LAYER ──
+          // ── 2. SPLASH LAYER (sirf logged in users ke liye) ──
           if (_showSplash)
             Positioned.fill(
               child: FadeTransition(
@@ -215,12 +225,12 @@ class _SplashScreenState extends State<Splash> with TickerProviderStateMixin {
 
                         // Bottom version + copyright
                         if (_showBottomText)
-                          Positioned(
+                          const Positioned(
                             bottom: 25,
                             left: 0,
                             right: 0,
                             child: Column(
-                              children: const [
+                              children: [
                                 Text(
                                   "V1.0.0",
                                   style: TextStyle(
